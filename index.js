@@ -38,7 +38,7 @@ let persons = [
 app.get('/info', (request, response) => {
     let d = new Date()
     response.send(`
-                    <h3>Phonebook has info for ${notes.length} people</h3>
+                    <h3>Phonebook has info for ${persons.length} people</h3>
                     <br>
                     <h3>${d}</h3>
                     `)
