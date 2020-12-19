@@ -1,107 +1,105 @@
-const { request, response } = require('express')
-const express = require('express')
-const app = express()
+const {request, response} = require("express")
+const express = require("express")
+const morgan = require('morgan')
 const cors = require('cors')
 
+const app = express()
 
-//Without the json-parser, the body property would be undefined. The json-parser functions so that it takes the JSON data of a request, transforms it into a JavaScript object and then attaches it to the body property of the request object before the route handler is called.
-
-app.use(express.json())
-app.use(cors())
-
-const requestLogger = (request, response, next) =>{
-    console.log('Method:', request.method)
-    console.log('Path:  ', request.path)
-    console.log('Body:  ', request.body)
-    console.log('---')
-    next()
-}
-
-const unknownEndpoint = (request, response) => {
-    response.status(404).send({ error: 'unknown endpoint' })
-  }
-
-app.use(requestLogger)
-
-let notes = [
-  {
-    id: 1,
-    content: "HTML is easyyy",
-    date: "2019-05-30T17:30:31.098Z",
-    important: true
-  },
-  {
-    id: 2,
-    content: "Browser can execute only Javascript",
-    date: "2019-05-30T18:39:34.091Z",
-    important: false
-  },
-  {
-    id: 3,
-    content: "GET and POST are the most important methods of HTTP protocol",
-    date: "2019-05-30T19:20:14.298Z",
-    important: true
-  }
-]
-app.get('/', (request, response) => {
-    response.send('<h1>Hello World</h1>')
+morgan.token('body', (request, response) => {
+    return JSON.stringify(request.body)
 })
 
-app.get('/api/notes', (request, response) => {
-    response.json(notes)
-  })
+app.use(cors())
+app.use(express.static('build'))
+app.use(express.json())
+app.use(morgan(':method  :url :status :res[content-length] - :response-time ms :body'))
 
-// use the colon syntax for parameters
+let persons = [
+    {
+        id: 1,
+        name: "Mohamed Mohamed",
+        number: "0555-55555",
+    },{
+        id: 2,
+        name: "Ahmed Sayed",
+        number: "0666-55555",
+    },{
+        id: 3,
+        name: "Amr Omar",
+        number: "0888-55555",
+    },{
+        id: 4,
+        name: "Tariq Ali",
+        number: "0100-55555",
+    },
+]
 
-app.get('/api/notes/:id', (request,response) => {
+
+
+app.get('/info', (request, response) => {
+    let d = new Date()
+    response.send(`
+                    <h3>Phonebook has info for ${persons.length} people</h3>
+                    <br>
+                    <h3>${d}</h3>
+                    `)
+})
+
+app.get('/api/persons',  (request, response) => {
+    response.json(persons)
+})
+
+app.get('/api/persons/:id', (request, response) => {
     const id = Number(request.params.id)
-    const note = notes.find(note => note.id === id)
-    
-    if (note) {
-        response.json(note)
+    const person = persons.find(person => person.id === id)
+    if (person) {
+        response.json(person)
     } else {
         response.status(404).end()
     }
 })
 
+app.delete('/api/persons/:id', (request, response) => {
+    const id = Number(request.params.id)
+    persons = persons.filter( person => person.id !== id)
+    
+    response.status(204).end()
+})
+
 const generateId = () => {
-    const maxId = notes.length > 0
-        ? Math.max(...notes.map(n => n.id))
-        : 0
-    return maxId + 1
+    return parseInt(Math.random() * 100000)
 }
 
-app.post('/api/notes', (request, response) => {
-    const body = request.body 
+app.post('/api/persons', (request, response) => {
+    const body = request.body
 
     if (!body.name && !body.number) {
         return response.status(400).json({ 
           error: 'name or number missing' 
         })
-      }
-    
-    const note = {
-        content: body.content,
-        important: body.important || false,
-        date: new Date(),
-        id: generateId(),
     }
     
-    notes = notes.concat(note)
-    
-    response.json(note)
-})
+    const exists = persons.find( person => person.name === body.name)
 
-app.delete('/api/notes/:id', (request, response) => {
-    const id = Number(request.params.id)
-    notes = notes.filter( note => note.id !== id)
+    if(exists){
+        return response.status(400).json({ 
+            error: 'this name is already existing' 
+          })
+    }
+
+    const person = {
+        name: body.name,
+        number: body.number,
+        id: generateId(),
+    }
+
+    persons = persons.concat(person)
 
     response.status(204).end()
+    
 })
 
-app.use(unknownEndpoint)
-  
 const PORT = process.env.PORT || 3001
-app.listen( PORT, () => {
+app.listen(PORT, () =>{
     console.log(`Server running on port ${PORT}`)
 })
